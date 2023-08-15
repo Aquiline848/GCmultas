@@ -1,10 +1,15 @@
+function removeDiacritics(text) {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+}
 function filterArticles(query) {
     const listItems = document.querySelectorAll('#articlesList li');
-    listItems.forEach(item => {
-        // Directamente obtenemos el contenido de texto del li
-        const articleDesc = item.textContent.trim();
+    const normalizedQuery = removeDiacritics(query.toLowerCase());
 
-        if (articleDesc.toLowerCase().includes(query.toLowerCase())) {
+    listItems.forEach(item => {
+        const articleDesc = item.textContent;
+        const normalizedDesc = removeDiacritics(articleDesc.toLowerCase());
+
+        if (normalizedDesc.includes(normalizedQuery)) {
             item.style.display = ''; // mostrar elemento
         } else {
             item.style.display = 'none'; // esconder elemento
