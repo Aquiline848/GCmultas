@@ -17,6 +17,8 @@ function filterArticles(query) {
     });
 }
 
+
+
 document.getElementById('searchInput').addEventListener('input', (e) => {
     const query = e.target.value;
     filterArticles(query);
@@ -29,15 +31,46 @@ document.getElementById('copyButton').addEventListener('click', function() {
     textarea.select();
     document.execCommand('copy');
 });
+const promptsShown = new Set();
+function getSanctionValue(item) {
+    const sanctionText = item.getAttribute('data-sancion');
+    const itemId = item.id; // Suponiendo que cada artículo tiene un id único
+    let sanctionValue = 0;
+
+    if (sanctionText.includes("X Kg") && !promptsShown.has(itemId)) {
+        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
+        let kg = parseFloat(prompt("¿Cuántos Kg?", "1"));
+        sanctionValue = baseSanction * (isNaN(kg) ? 1 : kg);
+        promptsShown.add(itemId); // Añadimos el artículo al registro
+    } else if (sanctionText.includes("€ (por cada persona)") && !promptsShown.has(itemId)) {
+        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
+        let people = parseFloat(prompt("¿Cuántas personas?", "1"));
+        sanctionValue = baseSanction * (isNaN(people) ? 1 : people);
+        promptsShown.add(itemId); // Añadimos el artículo al registro
+    } else if (sanctionText.includes("€ (por cada menor)") && !promptsShown.has(itemId)) {
+        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
+        let minors = parseFloat(prompt("¿Cuántos menores?", "1"));
+        sanctionValue = baseSanction * (isNaN(minors) ? 1 : minors);
+        promptsShown.add(itemId); // Añadimos el artículo al registro
+    } else {
+        sanctionValue = parseFloat(sanctionText.split("€")[0].trim());
+    }
+
+    // Esta parte asegura que no regresemos un NaN
+    return isNaN(sanctionValue) ? 0 : sanctionValue;
+}
+
+
+
 
 function getSanctionTotal() {
     let totalSanction = 0;
     const selectedItems = document.querySelectorAll('li.bg-white');
 
     selectedItems.forEach(item => {
-        const sanction = item.getAttribute('data-sancion');
-        if (sanction && !isNaN(parseInt(sanction))) {
-            totalSanction += parseInt(sanction);
+        const value = getSanctionValue(item);
+        if (value !== null) {
+            totalSanction += value;
         }
     });
 
@@ -46,17 +79,35 @@ function getSanctionTotal() {
 
 function updateCommand() {
     const commandElem = document.getElementById('command');
-    const selectedItems = document.querySelectorAll('li.bg-white');
-    const totalSanction = getSanctionTotal();
+    let selectedItems = Array.from(document.querySelectorAll('li.bg-white'));
     
-    let commandText = `?warn\nTotal: ${totalSanction} €`;
+    // Ordenar alfabéticamente los elementos seleccionados por su innerText
+    selectedItems.sort((a, b) => a.innerText.trim().localeCompare(b.innerText.trim()));
+
+    let totalSanction = 0;
+    let commandText = "?warn";
 
     selectedItems.forEach(item => {
-        commandText += `\n${item.innerText.trim()}`;
+        const sanctionValue = getSanctionValue(item);
+        totalSanction += sanctionValue;
+
+        // Comprobamos si el artículo tiene una sanción que requiere especificación adicional
+        if (item.innerText.includes('Art. 4.29 - Tráfico de drogas') || 
+            item.innerText.includes('Art. 4.23 - Posesión de estupefacientes') ||
+            item.innerText.includes('Art. 3.25 - Tráfico de personas') ||
+            item.innerText.includes('Art. 3.26 - Tráfico de menores')) {
+                commandText += `\n${item.innerText.trim()}: ${sanctionValue} €`;
+
+        } else {
+            commandText += `\n${item.innerText.trim()}: ${sanctionValue} €`;
+        }
     });
 
+    commandText = `?warn\nTotal: ${totalSanction} €` + commandText.substr(5); // Poner el total arriba
     commandElem.textContent = commandText;
+  
 }
+
 
 document.addEventListener('DOMContentLoaded', function() {
     const listItems = document.querySelectorAll('li');
