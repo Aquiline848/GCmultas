@@ -1,6 +1,14 @@
 function removeDiacritics(text) {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 }
+function removeNaNFromText(text) {
+    return text.replace(/ \(NaN\)/g, '');
+}
+function removeDuplicateSanctions(text) {
+    // Buscar patrones como ": 350 €: 350 €" y reemplazarlos por ": 350 €"
+    return text.replace(/: (\d+ ?€): \1/g, ': $1');
+}
+
 function filterArticles(query) {
     const listItems = document.querySelectorAll('#articlesList li');
     const normalizedQuery = removeDiacritics(query.toLowerCase());
@@ -91,22 +99,30 @@ function updateCommand() {
         const sanctionValue = getSanctionValue(item);
         totalSanction += sanctionValue;
 
-        // Comprobamos si el artículo tiene una sanción que requiere especificación adicional
-        if (item.innerText.includes('Art. 4.29 - Tráfico de drogas') || 
-            item.innerText.includes('Art. 4.23 - Posesión de estupefacientes') ||
-            item.innerText.includes('Art. 3.25 - Tráfico de personas') ||
-            item.innerText.includes('Art. 3.26 - Tráfico de menores')) {
-                commandText += `\n${item.innerText.trim()}: ${sanctionValue} €`;
+        // Detección y modificación de los artículos especiales
+        let modifiedText = item.innerText.trim();
+        if (item.innerText.includes('Tráfico de drogas') || 
+            item.innerText.includes('Posesión de estupefacientes') || 
+            item.innerText.includes('Tráfico de personas') || 
+            item.innerText.includes('Tráfico de menores')) {
+            
+            modifiedText = `${modifiedText} (${sanctionValue} €)`;
+        }
 
+        // Si el artículo tiene sanción duplicada, solo muestra una vez
+        const splitText = modifiedText.split(':');
+        if (splitText.length > 2) {
+            commandText += `\n${splitText[0]}: ${sanctionValue} €`;
         } else {
-            commandText += `\n${item.innerText.trim()}: ${sanctionValue} €`;
+            commandText += `\n${modifiedText}`;
         }
     });
 
     commandText = `?warn\nTotal: ${totalSanction} €` + commandText.substr(5); // Poner el total arriba
     commandElem.textContent = commandText;
-  
 }
+
+
 
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -124,3 +140,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
