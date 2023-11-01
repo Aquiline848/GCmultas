@@ -5,7 +5,7 @@ function removeNaNFromText(text) {
     return text.replace(/ \(NaN\)/g, '');
 }
 function removeDuplicateSanctions(text) {
-    // Buscar patrones como ": 350 €: 350 €" y reemplazarlos por ": 350 €"
+
     return text.replace(/: (\d+ ?€): \1/g, ': $1');
 }
 
@@ -18,9 +18,9 @@ function filterArticles(query) {
         const normalizedDesc = removeDiacritics(articleDesc.toLowerCase());
 
         if (normalizedDesc.includes(normalizedQuery)) {
-            item.style.display = ''; // mostrar elemento
+            item.style.display = ''; 
         } else {
-            item.style.display = 'none'; // esconder elemento
+            item.style.display = 'none'; 
         }
     });
 }
@@ -42,24 +42,24 @@ document.getElementById('copyButton').addEventListener('click', function() {
 const promptsShown = new Set();
 function getSanctionValue(item) {
     const sanctionText = item.getAttribute('data-sancion');
-    const itemId = item.id; // Suponiendo que cada artículo tiene un id único
+    const itemId = item.id;
     let sanctionValue = 0;
 
     if (sanctionText.includes("X Kg") && !promptsShown.has(itemId)) {
         let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
         let kg = parseFloat(prompt("¿Cuántos Kg?", "1"));
         sanctionValue = baseSanction * (isNaN(kg) ? 1 : kg);
-        promptsShown.add(itemId); // Añadimos el artículo al registro
+        promptsShown.add(itemId); 
     } else if (sanctionText.includes("€ (por cada persona)") && !promptsShown.has(itemId)) {
         let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
         let people = parseFloat(prompt("¿Cuántas personas?", "1"));
         sanctionValue = baseSanction * (isNaN(people) ? 1 : people);
-        promptsShown.add(itemId); // Añadimos el artículo al registro
+        promptsShown.add(itemId); 
     } else if (sanctionText.includes("€ (por cada menor)") && !promptsShown.has(itemId)) {
         let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
         let minors = parseFloat(prompt("¿Cuántos menores?", "1"));
         sanctionValue = baseSanction * (isNaN(minors) ? 1 : minors);
-        promptsShown.add(itemId); // Añadimos el artículo al registro
+        promptsShown.add(itemId); 
     } else {
         sanctionValue = parseFloat(sanctionText.split("€")[0].trim());
     }
@@ -87,19 +87,26 @@ function getSanctionTotal() {
 
 function updateCommand() {
     const commandElem = document.getElementById('command');
+    const arrestReportElem = document.getElementById('arrestReport');
+    const totalMultaElem = document.getElementById('totalMulta');
+    const razonElem = document.getElementById('razon');
+    
     let selectedItems = Array.from(document.querySelectorAll('li.bg-white'));
     
-    // Ordenar alfabéticamente los elementos seleccionados por su innerText
+
     selectedItems.sort((a, b) => a.innerText.trim().localeCompare(b.innerText.trim()));
 
     let totalSanction = 0;
+    let totalSinPrefijo = 0;
+    let totalConPrefijo = 0;
+    let articulosDeArresto = [];
     let commandText = "?warn";
 
     selectedItems.forEach(item => {
         const sanctionValue = getSanctionValue(item);
         totalSanction += sanctionValue;
 
-        // Detección y modificación de los artículos especiales
+  
         let modifiedText = item.innerText.trim();
         if (item.innerText.includes('Tráfico de drogas') || 
             item.innerText.includes('Posesión de estupefacientes') || 
@@ -109,18 +116,37 @@ function updateCommand() {
             modifiedText = `${modifiedText} (${sanctionValue} €)`;
         }
 
-        // Si el artículo tiene sanción duplicada, solo muestra una vez
         const splitText = modifiedText.split(':');
         if (splitText.length > 2) {
             commandText += `\n${splitText[0]}: ${sanctionValue} €`;
         } else {
             commandText += `\n${modifiedText}`;
         }
+
+ 
+        if (item.innerText.startsWith("art-1")) {
+            totalConPrefijo += sanctionValue;
+        } else {
+            totalSinPrefijo += sanctionValue;
+        }
+
+        articulosDeArresto.push(item.innerText.trim());
     });
 
-    commandText = `?warn\nTotal: ${totalSanction} €` + commandText.substr(5); // Poner el total arriba
+    commandText = `?warn\nTotal: ${totalSanction} €` + commandText.substr(5); 
     commandElem.textContent = commandText;
+
+    if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
+
+        arrestReportElem.classList.remove('hidden');
+        totalMultaElem.textContent = totalSanction;
+        razonElem.innerHTML = '<br>' + articulosDeArresto.join('<br>');
+    } else {
+
+        arrestReportElem.classList.add('hidden');
+    }
 }
+
 
 
 
@@ -140,4 +166,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
