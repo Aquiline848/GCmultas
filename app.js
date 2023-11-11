@@ -8,6 +8,10 @@ function removeDuplicateSanctions(text) {
 
     return text.replace(/: (\d+ ?€): \1/g, ': $1');
 }
+function quitarCoso(text) {
+    const regex = /\s€ar usuario: razon:/;
+    return text.replace(regex, '');
+}
 
 function filterArticles(query) {
     const listItems = document.querySelectorAll('#articlesList li');
@@ -64,7 +68,6 @@ function getSanctionValue(item) {
         sanctionValue = parseFloat(sanctionText.split("€")[0].trim());
     }
 
-    // Esta parte asegura que no regresemos un NaN
     return isNaN(sanctionValue) ? 0 : sanctionValue;
 }
 
@@ -100,7 +103,7 @@ function updateCommand() {
     let totalSinPrefijo = 0;
     let totalConPrefijo = 0;
     let articulosDeArresto = [];
-    let commandText = "?warn";
+    let commandText = "/multar usuario: razon:";
 
     selectedItems.forEach(item => {
         const sanctionValue = getSanctionValue(item);
@@ -133,8 +136,8 @@ function updateCommand() {
         articulosDeArresto.push(item.innerText.trim());
     });
 
-    commandText = `?warn\nTotal: ${totalSanction} €` + commandText.substr(5); 
-    commandElem.textContent = commandText;
+    commandText = `/multar usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5); 
+    commandElem.textContent = quitarCoso(commandText);
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
 
