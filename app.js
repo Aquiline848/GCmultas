@@ -9,7 +9,7 @@ function removeDuplicateSanctions(text) {
     return text.replace(/: (\d+ ?€): \1/g, ': $1');
 }
 function quitarCoso(text) {
-    const regex = /\s€ar usuario: razon:/;
+    const regex = /\s€as poner usuario: razon:/;
     return text.replace(regex, '');
 }
 
