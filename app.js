@@ -103,7 +103,7 @@ function updateCommand() {
     let totalSinPrefijo = 0;
     let totalConPrefijo = 0;
     let articulosDeArresto = [];
-    let commandText = "/multar usuario: razon:";
+    let commandText = "/multas poner usuario: razon:";
 
     selectedItems.forEach(item => {
         const sanctionValue = getSanctionValue(item);
@@ -136,7 +136,7 @@ function updateCommand() {
         articulosDeArresto.push(item.innerText.trim());
     });
 
-    commandText = `/multar usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5); 
+    commandText = `/multas poner usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5); 
     commandElem.textContent = quitarCoso(commandText);
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
