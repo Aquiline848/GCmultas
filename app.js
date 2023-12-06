@@ -9,7 +9,7 @@ function removeDuplicateSanctions(text) {
     return text.replace(/: (\d+ ?€): \1/g, ': $1');
 }
 function quitarCoso(text) {
-    const regex = /\s€as poner usuario: razon:/;
+    const regex = /\s€ar usuario: razon:/;
     return text.replace(regex, '');
 }
 
@@ -22,9 +22,9 @@ function filterArticles(query) {
         const normalizedDesc = removeDiacritics(articleDesc.toLowerCase());
 
         if (normalizedDesc.includes(normalizedQuery)) {
-            item.style.display = ''; 
+            item.style.display = '';
         } else {
-            item.style.display = 'none'; 
+            item.style.display = 'none';
         }
     });
 }
@@ -35,43 +35,58 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
     const query = e.target.value;
     filterArticles(query);
 });
-document.getElementById('goToCommand').addEventListener('click', function() {
-    window.scrollTo(0,document.body.scrollHeight);
+document.getElementById('goToCommand').addEventListener('click', function () {
+    window.scrollTo(0, document.body.scrollHeight);
 });
-document.getElementById('copyButton').addEventListener('click', function() {
+document.getElementById('copyButton').addEventListener('click', function () {
     const textarea = document.getElementById('command');
     textarea.select();
     document.execCommand('copy');
 });
-const promptsShown = new Set();
+const userEnteredSanctions = new Map(); // Usamos un Map para un mejor seguimiento
+
 function getSanctionValue(item) {
     const sanctionText = item.getAttribute('data-sancion');
     const itemId = item.id;
-    let sanctionValue = 0;
 
-    if (sanctionText.includes("X Kg") && !promptsShown.has(itemId)) {
-        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
-        let kg = parseFloat(prompt("¿Cuántos Kg?", "1"));
-        sanctionValue = baseSanction * (isNaN(kg) ? 1 : kg);
-        promptsShown.add(itemId); 
-    } else if (sanctionText.includes("€ (por cada persona)") && !promptsShown.has(itemId)) {
-        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
-        let people = parseFloat(prompt("¿Cuántas personas?", "1"));
-        sanctionValue = baseSanction * (isNaN(people) ? 1 : people);
-        promptsShown.add(itemId); 
-    } else if (sanctionText.includes("€ (por cada menor)") && !promptsShown.has(itemId)) {
-        let baseSanction = parseFloat(sanctionText.split("€")[0].trim());
-        let minors = parseFloat(prompt("¿Cuántos menores?", "1"));
-        sanctionValue = baseSanction * (isNaN(minors) ? 1 : minors);
-        promptsShown.add(itemId); 
-    } else {
-        sanctionValue = parseFloat(sanctionText.split("€")[0].trim());
+    // Verificamos si ya se ingresó un valor para este artículo
+    if (userEnteredSanctions.has(itemId)) {
+        return userEnteredSanctions.get(itemId);
     }
 
-    return isNaN(sanctionValue) ? 0 : sanctionValue;
+    // Expresión regular mejorada para detectar un rango de sanción y permitir texto adicional entre el rango y el "€"
+    const rangeRegex = /(\d+)\s*-\s*(\d+)\s*€/;
+
+    let rangeMatch = sanctionText.match(rangeRegex);
+    let sanctionValue = 0;
+
+    if (rangeMatch) {
+        let minValue = parseFloat(rangeMatch[1]);
+        let maxValue = parseFloat(rangeMatch[2]);
+
+        // Solicitar al usuario que ingrese un valor dentro del rango
+        let userInput = prompt(`Ingrese una cantidad entre ${minValue} y ${maxValue}:`, '');
+        if (userInput !== null) {
+            let inputValue = parseFloat(userInput);
+            if (!isNaN(inputValue) && inputValue >= minValue && inputValue <= maxValue) {
+                sanctionValue = inputValue;
+                userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor introducido
+            } else {
+                alert(`Debe ingresar un valor válido entre ${minValue} y ${maxValue}.`);
+                return getSanctionValue(item); // Reintentar si la entrada es inválida
+            }
+        } else {
+            // Si el usuario cancela, decide qué hacer. Aquí simplemente regresamos 0.
+            sanctionValue = 0;
+        }
+    } else {
+        // Si no es un rango, se maneja como un valor fijo
+        sanctionValue = parseFloat(sanctionText.replace('€', '').trim());
+        userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor fijo
+    }
+
+    return sanctionValue;
 }
-
-
 
 
 function getSanctionTotal() {
@@ -93,9 +108,8 @@ function updateCommand() {
     const arrestReportElem = document.getElementById('arrestReport');
     const totalMultaElem = document.getElementById('totalMulta');
     const razonElem = document.getElementById('razon');
-    
+
     let selectedItems = Array.from(document.querySelectorAll('li.bg-white'));
-    
 
     selectedItems.sort((a, b) => a.innerText.trim().localeCompare(b.innerText.trim()));
 
@@ -103,19 +117,18 @@ function updateCommand() {
     let totalSinPrefijo = 0;
     let totalConPrefijo = 0;
     let articulosDeArresto = [];
-    let commandText = "/multas poner usuario: razon:";
+    let commandText = "/multar usuario: razon:";
 
     selectedItems.forEach(item => {
         const sanctionValue = getSanctionValue(item);
         totalSanction += sanctionValue;
 
-  
         let modifiedText = item.innerText.trim();
-        if (item.innerText.includes('Tráfico de drogas') || 
-            item.innerText.includes('Posesión de estupefacientes') || 
-            item.innerText.includes('Tráfico de personas') || 
+        if (item.innerText.includes('Tráfico de drogas') ||
+            item.innerText.includes('Posesión de estupefacientes') ||
+            item.innerText.includes('Tráfico de personas') ||
             item.innerText.includes('Tráfico de menores')) {
-            
+
             modifiedText = `${modifiedText} (${sanctionValue} €)`;
         }
 
@@ -126,39 +139,34 @@ function updateCommand() {
             commandText += `\n${modifiedText}`;
         }
 
- 
         if (item.innerText.startsWith("art-1")) {
             totalConPrefijo += sanctionValue;
         } else {
             totalSinPrefijo += sanctionValue;
         }
 
-        articulosDeArresto.push(item.innerText.trim());
+        articulosDeArresto.push(modifiedText);
     });
 
-    commandText = `/multas poner usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5); 
+    commandText = `/multar usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5);
     commandElem.textContent = quitarCoso(commandText);
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
-
         arrestReportElem.classList.remove('hidden');
         totalMultaElem.textContent = totalSanction;
         razonElem.innerHTML = '<br>' + articulosDeArresto.join('<br>');
     } else {
-
         arrestReportElem.classList.add('hidden');
     }
 }
 
 
 
-
-
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const listItems = document.querySelectorAll('li');
 
     listItems.forEach(item => {
-        item.addEventListener('click', function(e) {
+        item.addEventListener('click', function (e) {
             if (e.target.classList.contains('bg-white')) {
                 e.target.classList.remove('bg-white');
             } else {
