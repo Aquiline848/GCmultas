@@ -148,7 +148,7 @@ function updateCommand() {
         articulosDeArresto.push(modifiedText);
     });
 
-    commandText = `/multar usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5);
+    commandText = `/multas poner usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5);
     commandElem.textContent = quitarCoso(commandText);
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
