@@ -43,18 +43,18 @@ document.getElementById('copyButton').addEventListener('click', function () {
     textarea.select();
     document.execCommand('copy');
 });
-const userEnteredSanctions = new Map(); // Usamos un Map para un mejor seguimiento
+const userEnteredSanctions = new Map(); 
 
 function getSanctionValue(item) {
     const sanctionText = item.getAttribute('data-sancion');
     const itemId = item.id;
 
-    // Verificamos si ya se ingresó un valor para este artículo
+    
     if (userEnteredSanctions.has(itemId)) {
         return userEnteredSanctions.get(itemId);
     }
 
-    // Expresión regular mejorada para detectar un rango de sanción y permitir texto adicional entre el rango y el "€"
+    
     const rangeRegex = /(\d+)\s*-\s*(\d+)\s*€/;
 
     let rangeMatch = sanctionText.match(rangeRegex);
@@ -64,25 +64,25 @@ function getSanctionValue(item) {
         let minValue = parseFloat(rangeMatch[1]);
         let maxValue = parseFloat(rangeMatch[2]);
 
-        // Solicitar al usuario que ingrese un valor dentro del rango
+        
         let userInput = prompt(`Ingrese una cantidad entre ${minValue} y ${maxValue}:`, '');
         if (userInput !== null) {
             let inputValue = parseFloat(userInput);
             if (!isNaN(inputValue) && inputValue >= minValue && inputValue <= maxValue) {
                 sanctionValue = inputValue;
-                userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor introducido
+                userEnteredSanctions.set(itemId, sanctionValue); 
             } else {
                 alert(`Debe ingresar un valor válido entre ${minValue} y ${maxValue}.`);
-                return getSanctionValue(item); // Reintentar si la entrada es inválida
+                return getSanctionValue(item); 
             }
         } else {
-            // Si el usuario cancela, decide qué hacer. Aquí simplemente regresamos 0.
+           
             sanctionValue = 0;
         }
     } else {
-        // Si no es un rango, se maneja como un valor fijo
+    
         sanctionValue = parseFloat(sanctionText.replace('€', '').trim());
-        userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor fijo
+        userEnteredSanctions.set(itemId, sanctionValue); 
     }
 
     return sanctionValue;
