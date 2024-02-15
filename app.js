@@ -12,6 +12,9 @@ function quitarCoso(text) {
     const regex = /\s€ar usuario: razon:/;
     return text.replace(regex, '');
 }
+function removePlusMinusFromText(text) {
+    return text.replace(/\+|-/g, '');
+}
 
 function filterArticles(query) {
     const listItems = document.querySelectorAll('#articlesList li');
@@ -43,18 +46,18 @@ document.getElementById('copyButton').addEventListener('click', function () {
     textarea.select();
     document.execCommand('copy');
 });
-const userEnteredSanctions = new Map(); 
+const userEnteredSanctions = new Map();     
 
 function getSanctionValue(item) {
     const sanctionText = item.getAttribute('data-sancion');
     const itemId = item.id;
 
-    
+  
     if (userEnteredSanctions.has(itemId)) {
         return userEnteredSanctions.get(itemId);
     }
 
-    
+   
     const rangeRegex = /(\d+)\s*-\s*(\d+)\s*€/;
 
     let rangeMatch = sanctionText.match(rangeRegex);
@@ -64,7 +67,7 @@ function getSanctionValue(item) {
         let minValue = parseFloat(rangeMatch[1]);
         let maxValue = parseFloat(rangeMatch[2]);
 
-        
+       
         let userInput = prompt(`Ingrese una cantidad entre ${minValue} y ${maxValue}:`, '');
         if (userInput !== null) {
             let inputValue = parseFloat(userInput);
@@ -76,13 +79,13 @@ function getSanctionValue(item) {
                 return getSanctionValue(item); 
             }
         } else {
-           
+            
             sanctionValue = 0;
         }
     } else {
-    
+        
         sanctionValue = parseFloat(sanctionText.replace('€', '').trim());
-        userEnteredSanctions.set(itemId, sanctionValue); 
+        userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor fijo
     }
 
     return sanctionValue;
@@ -149,12 +152,12 @@ function updateCommand() {
     });
 
     commandText = `/multas poner usuario: razon:\nTotal: ${totalSanction} €` + commandText.substr(5);
-    commandElem.textContent = quitarCoso(commandText);
+    commandElem.textContent = quitarCoso(removePlusMinusFromText(commandText));
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
         arrestReportElem.classList.remove('hidden');
         totalMultaElem.textContent = totalSanction;
-        razonElem.innerHTML = '<br>' + articulosDeArresto.join('<br>');
+        razonElem.innerHTML = removePlusMinusFromText('<br>' + articulosDeArresto.join('<br>'));
     } else {
         arrestReportElem.classList.add('hidden');
     }
@@ -175,5 +178,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             updateCommand();
         });
-    });
+    }); 
+    
 });
