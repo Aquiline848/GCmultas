@@ -1,6 +1,10 @@
 function removeDiacritics(text) {
     return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 }
+function removedupli(text) {
+    let regex = /ar usuario: razon:/i;
+    return text.normalize(regex, "");
+}
 function removeNaNFromText(text) {
     return text.replace(/ \(NaN\)/g, '');
 }
@@ -152,7 +156,7 @@ function updateCommand() {
     });
 
     commandText = `/multas poner usuario: razon:` + commandText.substr(5);
-    commandElem.textContent = quitarCoso(removePlusMinusFromText(commandText));
+    commandElem.textContent = removedupli(quitarCoso(removePlusMinusFromText(commandText)));
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
         arrestReportElem.classList.remove('hidden');
