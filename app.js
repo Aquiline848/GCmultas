@@ -1,28 +1,30 @@
-function regex(text) {
-    const patterns = [
-        /[\u0300-\u036f]/g, 
-        /ar usuario: razon:/g, 
-        / \(NaN\)/g, 
-        /: (\d+ ?€): \1/g, 
-        /\s€ar usuario: razon:/g, 
-        /\+|-/g 
-    ];
 
-    patterns.forEach(pattern => {
-        text = text.replace(pattern, '');
-    });
 
-    return text;
+function removeDiacritics(text) {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
 }
+function removeNaNFromText(text) {
+    return text.replace(/ \(NaN\)/g, '');
+}
+function removeDuplicateSanctions(text) {
 
+    return text.replace(/: (\d+ ?€): \1/g, ': $1');
+}
+function quitarCoso(text) {
+    const regex = /\s€ar usuario: razon:/;
+    return text.replace(regex, '');
+}
+function removePlusMinusFromText(text) {
+    return text.replace(/\+|-/g, '');
+}
 
 function filterArticles(query) {
     const listItems = document.querySelectorAll('#articlesList li');
-    const normalizedQuery = regex(query.toLowerCase());
+    const normalizedQuery = removeDiacritics(query.toLowerCase());
 
     listItems.forEach(item => {
         const articleDesc = item.textContent;
-        const normalizedDesc = regex(articleDesc.toLowerCase());
+        const normalizedDesc = removeDiacritics(articleDesc.toLowerCase());
 
         if (normalizedDesc.includes(normalizedQuery)) {
             item.style.display = '';
@@ -151,13 +153,13 @@ function updateCommand() {
         articulosDeArresto.push(modifiedText);
     });
 
-    commandText = `/multas poner usuario: razon:` + commandText.substr(5);
-    commandElem.textContent = regex(commandText);
+    commandText = `/multas poner usuario: razon:\nTotal:  €` + commandText.substr(5);
+    commandElem.textContent = quitarCoso(removePlusMinusFromText(commandText));
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
         arrestReportElem.classList.remove('hidden');
         totalMultaElem.textContent = totalSanction;
-        razonElem.innerHTML = regex('<br>' + articulosDeArresto.join('<br>'));
+        razonElem.innerHTML = removePlusMinusFromText('<br>' + articulosDeArresto.join('<br>'));
     } else {
         arrestReportElem.classList.add('hidden');
     }
