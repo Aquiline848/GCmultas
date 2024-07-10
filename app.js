@@ -158,8 +158,7 @@ function updateCommand() {
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
         arrestReportElem.classList.remove('hidden');
-        totalMultaElem.textContent = totalSanction;
-        razonElem.innerHTML = removePlusMinusFromText('<br>' + articulosDeArresto.join('<br>'));
+        razonElem.innerHTML = removePlusMinusFromText('razon: <br>' + articulosDeArresto.join('<br>'));
     } else {
         arrestReportElem.classList.add('hidden');
     }
