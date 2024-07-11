@@ -1,127 +1,63 @@
+// Helper functions
+const removeDiacritics = text => text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
+const removeNaNFromText = text => text.replace(/ \(NaN\)/g, '');
+const removeDuplicateSanctions = text => text.replace(/: (\d+ ?€): \1/g, ': $1');
+const quitarCoso = text => text.replace(/\s€ar usuario: razon:/, '');
+const removePlusMinusFromText = text => text.replace(/\+|-/g, '');
 
-
-function removeDiacritics(text) {
-    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, "");
-}
-function removeNaNFromText(text) {
-    return text.replace(/ \(NaN\)/g, '');
-}
-function removeDuplicateSanctions(text) {
-
-    return text.replace(/: (\d+ ?€): \1/g, ': $1');
-}
-function quitarCoso(text) {
-    const regex = /\s€ar usuario: razon:/;
-    return text.replace(regex, '');
-}
-function removePlusMinusFromText(text) {
-    return text.replace(/\+|-/g, '');
-}
-
-function filterArticles(query) {
-    const listItems = document.querySelectorAll('#articlesList li');
+// Main functions
+const filterArticles = query => {
     const normalizedQuery = removeDiacritics(query.toLowerCase());
-
-    listItems.forEach(item => {
-        const articleDesc = item.textContent;
-        const normalizedDesc = removeDiacritics(articleDesc.toLowerCase());
-
-        if (normalizedDesc.includes(normalizedQuery)) {
-            item.style.display = '';
-        } else {
-            item.style.display = 'none';
-        }
+    document.querySelectorAll('#articlesList li').forEach(item => {
+        const normalizedDesc = removeDiacritics(item.textContent.toLowerCase());
+        item.style.display = normalizedDesc.includes(normalizedQuery) ? '' : 'none';
     });
-}
+};
 
+const userEnteredSanctions = new Map();
 
-
-document.getElementById('searchInput').addEventListener('input', (e) => {
-    const query = e.target.value;
-    filterArticles(query);
-});
-document.getElementById('goToCommand').addEventListener('click', function () {
-    window.scrollTo(0, document.body.scrollHeight);
-});
-document.getElementById('copyButton').addEventListener('click', function () {
-    const textarea = document.getElementById('command');
-    textarea.select();
-    document.execCommand('copy');
-});
-const userEnteredSanctions = new Map();     
-
-function getSanctionValue(item) {
-    const sanctionText = item.getAttribute('data-sancion');
+const getSanctionValue = item => {
     const itemId = item.id;
+    if (userEnteredSanctions.has(itemId)) return userEnteredSanctions.get(itemId);
 
-  
-    if (userEnteredSanctions.has(itemId)) {
-        return userEnteredSanctions.get(itemId);
-    }
-
-   
-    const rangeRegex = /(\d+)\s*-\s*(\d+)\s*€/;
-
-    let rangeMatch = sanctionText.match(rangeRegex);
-    let sanctionValue = 0;
+    const sanctionText = item.getAttribute('data-sancion');
+    const rangeMatch = sanctionText.match(/(\d+)\s*-\s*(\d+)\s*€/);
 
     if (rangeMatch) {
-        let minValue = parseFloat(rangeMatch[1]);
-        let maxValue = parseFloat(rangeMatch[2]);
+        const [, minValue, maxValue] = rangeMatch.map(Number);
+        const userInput = prompt(`Ingrese una cantidad entre ${minValue} y ${maxValue}:`, '');
+        if (userInput === null) return 0;
 
-       
-        let userInput = prompt(`Ingrese una cantidad entre ${minValue} y ${maxValue}:`, '');
-        if (userInput !== null) {
-            let inputValue = parseFloat(userInput);
-            if (!isNaN(inputValue) && inputValue >= minValue && inputValue <= maxValue) {
-                sanctionValue = inputValue;
-                userEnteredSanctions.set(itemId, sanctionValue); 
-            } else {
-                alert(`Debe ingresar un valor válido entre ${minValue} y ${maxValue}.`);
-                return getSanctionValue(item); 
-            }
-        } else {
-            
-            sanctionValue = 0;
+        const inputValue = parseFloat(userInput);
+        if (isNaN(inputValue) || inputValue < minValue || inputValue > maxValue) {
+            alert(`Debe ingresar un valor válido entre ${minValue} y ${maxValue}.`);
+            return getSanctionValue(item);
         }
-    } else {
-        
-        sanctionValue = parseFloat(sanctionText.replace('€', '').trim());
-        userEnteredSanctions.set(itemId, sanctionValue); // Almacenamos el valor fijo
+        userEnteredSanctions.set(itemId, inputValue);
+        return inputValue;
     }
 
+    const sanctionValue = parseFloat(sanctionText.replace('€', '').trim());
+    if (isNaN(sanctionValue)) {
+        console.warn(`Invalid sanction value for item: ${item.innerText}`);
+        return 0;
+    }
+    userEnteredSanctions.set(itemId, sanctionValue);
     return sanctionValue;
-}
+};
 
-
-function getSanctionTotal() {
-    let totalSanction = 0;
-    const selectedItems = document.querySelectorAll('li.bg-white');
-
-    selectedItems.forEach(item => {
-        const value = getSanctionValue(item);
-        if (value !== null) {
-            totalSanction += value;
-        }
-    });
-
-    return totalSanction;
-}
-
-function updateCommand() {
+const updateCommand = () => {
     const commandElem = document.getElementById('command');
     const arrestReportElem = document.getElementById('arrestReport');
-    const totalMultaElem = document.getElementById('totalMulta');
     const razonElem = document.getElementById('razon');
 
-    let selectedItems = Array.from(document.querySelectorAll('li.bg-white'));
-
-    selectedItems.sort((a, b) => a.innerText.trim().localeCompare(b.innerText.trim()));
+    const selectedItems = Array.from(document.querySelectorAll('li.bg-white'))
+        .sort((a, b) => a.innerText.trim().localeCompare(b.innerText.trim()));
 
     let totalSanction = 0;
     let totalSinPrefijo = 0;
     let totalConPrefijo = 0;
-    let articulosDeArresto = [];
+    const articulosDeArresto = [];
     let commandText = "/multar usuario: razon:";
 
     selectedItems.forEach(item => {
@@ -129,31 +65,25 @@ function updateCommand() {
         totalSanction += sanctionValue;
 
         let modifiedText = item.innerText.trim();
-        if (item.innerText.includes('Tráfico de drogas') ||
-            item.innerText.includes('Posesión de estupefacientes') ||
-            item.innerText.includes('Tráfico de personas') ||
-            item.innerText.includes('Tráfico de menores')) {
+        const rangeMatch = modifiedText.match(/(\d+)\s*-\s*(\d+)\s*€/);
 
+        if (rangeMatch) {
+            modifiedText = modifiedText.replace(/: \d+\s*-\s*\d+\s*€.*/, `: ${sanctionValue} €`);
+        } else if (['Tráfico de drogas', 'Posesión de estupefacientes', 'Tráfico de personas', 'Tráfico de menores']
+            .some(phrase => modifiedText.includes(phrase))) {
             modifiedText = `${modifiedText} (${sanctionValue} €)`;
         }
 
         const splitText = modifiedText.split(':');
-        if (splitText.length > 2) {
-            commandText += `\n${splitText[0]}: ${sanctionValue} €`;
-        } else {
-            commandText += `\n${modifiedText}`;
-        }
+        commandText += splitText.length > 2 
+            ? `\n${splitText[0]}: ${sanctionValue} €`
+            : `\n${modifiedText}`;
 
-        if (item.innerText.startsWith("art-1")) {
-            totalConPrefijo += sanctionValue;
-        } else {
-            totalSinPrefijo += sanctionValue;
-        }
-
+        item.innerText.startsWith("art-1") ? totalConPrefijo += sanctionValue : totalSinPrefijo += sanctionValue;
         articulosDeArresto.push(modifiedText);
     });
 
-    commandText = `/multas poner usuario: razon:\nTotal:  €` + commandText.substr(5);
+    commandText = `/multas poner usuario: razon:\nTotal: ${totalSanction} €${commandText.substr(5)}`;
     commandElem.textContent = quitarCoso(removePlusMinusFromText(commandText));
 
     if (totalSinPrefijo > 1000 || totalConPrefijo > 2000) {
@@ -162,23 +92,21 @@ function updateCommand() {
     } else {
         arrestReportElem.classList.add('hidden');
     }
-}
-
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    const listItems = document.querySelectorAll('li');
-
-    listItems.forEach(item => {
-        item.addEventListener('click', function (e) {
-            if (e.target.classList.contains('bg-white')) {
-                e.target.classList.remove('bg-white');
-            } else {
-                e.target.classList.add('bg-white');
-            }
-
+};
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('li').forEach(item => {
+        item.addEventListener('click', function() {
+            this.classList.toggle('bg-white');
             updateCommand();
         });
-    }); 
-    
+    });
+
+    document.getElementById('searchInput').addEventListener('input', e => filterArticles(e.target.value));
+    document.getElementById('goToCommand').addEventListener('click', () => window.scrollTo(0, document.body.scrollHeight));
+    document.getElementById('copyButton').addEventListener('click', () => {
+        const textarea = document.getElementById('command');
+        textarea.select();
+        document.execCommand('copy');
+    });
 });
